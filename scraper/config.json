@@ -1,0 +1,81 @@
+{
+  "_comment": [
+    "LoveLive! scraper configuration. Edit this file, not scrape.js, to add or tune sources.",
+    "Selectors below were verified against the live HTML on 2026-11-24. The official site has no API or RSS feed and its markup can change, so re-check them if a source starts reporting 'matched 0 elements'.",
+    "Group sites are listed first so their entries win the group attribution; the aggregate portal comes last because it links to the same stories with /news/01_xxxx.html URLs (the scraper collapses those mirrors via the 01_xxxx article number).",
+    "The scraper only extracts a title, a date (when found) and an absolute link. It never follows detail pages, so bonuses / tickets / type stay TODO for manual entry.",
+    "X (Twitter) is intentionally not scraped: no free API and strict anti-bot rules.",
+    "requestDelayMs keeps the load on the official servers polite (1500 ms by default)."
+  ],
+  "requestDelayMs": 1500,
+  "sources": [
+    {
+      "name": "mu's (Otonokizaka)",
+      "url": "https://www.lovelive-anime.jp/otonokizaka/topics.php",
+      "group": "μ's",
+      "baseUrl": "https://www.lovelive-anime.jp/otonokizaka/topics.php",
+      "itemSelector": "ul.listbox > li",
+      "titleSelector": "p.title",
+      "dateSelector": "p.date",
+      "linkSelector": "a"
+    },
+    {
+      "name": "Aqours (Uranohoshi)",
+      "url": "https://www.lovelive-anime.jp/uranohoshi/topics.php",
+      "group": "Aqours",
+      "baseUrl": "https://www.lovelive-anime.jp/uranohoshi/topics.php",
+      "itemSelector": "ul.listbox > li",
+      "titleSelector": "p.title",
+      "dateSelector": "p.date",
+      "linkSelector": "a"
+    },
+    {
+      "name": "Nijigasaki",
+      "url": "https://www.lovelive-anime.jp/nijigasaki/topics.php",
+      "group": "Nijigasaki",
+      "baseUrl": "https://www.lovelive-anime.jp/nijigasaki/topics.php",
+      "itemSelector": "ul.listbox > li",
+      "titleSelector": "p.title",
+      "dateSelector": "p.date",
+      "linkSelector": "a"
+    },
+    {
+      "name": "Liella! (Yuigaoka)",
+      "url": "https://www.lovelive-anime.jp/yuigaoka/topics/",
+      "group": "Liella!",
+      "baseUrl": "https://www.lovelive-anime.jp/yuigaoka/topics/",
+      "itemSelector": ".listbox > li",
+      "titleSelector": "p.title",
+      "dateSelector": "p.date",
+      "linkSelector": "a"
+    },
+    {
+      "name": "Hasunosora",
+      "url": "https://www.lovelive-anime.jp/hasunosora/news/",
+      "group": "Hasunosora",
+      "baseUrl": "https://www.lovelive-anime.jp/hasunosora/news/",
+      "itemSelector": "a.insite[href*='detail']",
+      "titleSelector": ".list--text",
+      "dateSelector": ".list--date",
+      "linkSelector": ""
+    },
+    {
+      "name": "LoveLive! portal (aggregate)",
+      "url": "https://www.lovelive-anime.jp/",
+      "group": "All",
+      "baseUrl": "https://www.lovelive-anime.jp/",
+      "itemSelector": "a.p-newslist",
+      "titleSelector": ".p-newslist__title",
+      "dateSelector": ".p-newslist__time",
+      "groupSelector": ".p-newslist__category",
+      "groupMap": {
+        "ラブライブ！": "μ's",
+        "サンシャイン!!": "Aqours",
+        "虹ヶ咲学園": "Nijigasaki",
+        "スーパースター!!": "Liella!",
+        "蓮ノ空": "Hasunosora"
+      },
+      "linkSelector": ""
+    }
+  ]
+}

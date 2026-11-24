@@ -1,0 +1,2 @@
+# Store every text file with LF so Windows and GitHub Actions see identical bytes.
+* text=auto eol=lf

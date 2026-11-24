@@ -1,0 +1,58 @@
+name: Update LoveLive news
+
+# Runs every day at 00:00 UTC (= 08:00 in Hong Kong).
+# Use the "Run workflow" button (workflow_dispatch) to trigger it manually.
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+# Required so the job can push the refreshed data.json back to the repository.
+permissions:
+  contents: write
+
+concurrency:
+  group: lovelive-news-scraper
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scraper
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run scraper
+        run: npm run scrape
+
+      - name: Validate data and sync the inline snapshot
+        working-directory: .
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('data.json','utf8')); console.log('data.json is valid JSON')"
+          node --check app.js
+          node tools/sync-fallback.mjs
+
+      - name: Commit changes
+        working-directory: .
+        run: |
+          if git diff --quiet -- data.json index.html; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json index.html
+          git commit -m "chore(data): refresh LoveLive news [skip ci]"
+          git push

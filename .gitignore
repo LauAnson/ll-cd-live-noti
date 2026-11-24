@@ -1,0 +1,6 @@
+# Dependencies and local test output are never committed.
+node_modules/
+scrape-*.log
+_verify*.txt
+.DS_Store
+Thumbs.db

@@ -1,0 +1,20 @@
+{
+  "name": "lovelive-news-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheduled scraper that appends new LoveLive! official news titles and links to ../data.json.",
+  "main": "scrape.js",
+  "scripts": {
+    "scrape": "node scrape.js",
+    "scrape:dry": "node scrape.js --dry-run",
+    "check": "node --check scrape.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "fs-extra": "^11.3.0"
+  }
+}
