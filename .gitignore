@@ -2,5 +2,10 @@
 node_modules/
 scrape-*.log
 _verify*.txt
+_*.log
+_*.txt
+_*.err
+_check.js
+_patch.js
 .DS_Store
 Thumbs.db
