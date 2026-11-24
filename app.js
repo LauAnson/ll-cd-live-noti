@@ -26,7 +26,7 @@
   const DATA_URL = 'data.json';
   const OWNED_STORAGE_KEY = 'lovelive-tracker.owned.v1';
   const ALL = '__all__';
-  const GROUP_ORDER = ["μ's", 'Aqours', 'Nijigasaki', 'Liella!', 'Hasunosora'];
+  const GROUP_ORDER = ["μ's", 'Aqours', 'Nijigasaki', 'Liella!', 'Hasunosora', 'All'];
   const TYPE_ORDER = ['CD Release', 'Merch', 'Popup/Collab Store', 'Live', 'Uncategorized'];
   const TYPE_CLASS = {
     'CD Release': 'type-cd',
@@ -605,17 +605,17 @@
         list.append(el('li', { text: song }));
       });
       body.append(list);
-    } else {
-      body.append(el('p', { class: 'meta is-todo', text: 'Track list TODO' }));
     }
 
-    const offer = el('div', { class: 'offer' });
-    offer.append(el('span', { class: 'offer-label', text: 'Special offer' }));
-    offer.append(el('p', {
-      class: 'offer-text' + (isTodo(cd.specialOffer) ? ' is-todo' : ''),
-      text: cd.specialOffer || 'TODO: add store / pre-order bonus details.'
-    }));
-    body.append(offer);
+    if (cd.specialOffer) {
+      const offer = el('div', { class: 'offer' });
+      offer.append(el('span', { class: 'offer-label', text: 'Special offer' }));
+      offer.append(el('p', {
+        class: 'offer-text' + (isTodo(cd.specialOffer) ? ' is-todo' : ''),
+        text: cd.specialOffer
+      }));
+      body.append(offer);
+    }
 
     const actions = el('div', { class: 'card-actions' });
     if (cd.officialLink) {

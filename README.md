@@ -30,7 +30,8 @@ Everything is plain HTML, CSS and JavaScript. There is no framework, no bundler 
 │  ├─ config.json                 # sources + CSS selectors (no secrets)
 │  └─ scrape.js                   # axios + cheerio scraper
 └─ tools/
-   └─ sync-fallback.mjs           # copies data.json into index.html
+   ├─ import-discography.mjs     # rebuild cds[] from the official discography pages
+   └─ sync-fallback.mjs          # copies data.json into index.html
 ```
 
 ## 2. Quick start
@@ -82,7 +83,7 @@ lovelive-anime.jp  --(scraper, daily)-->  data.json  --(fetch)-->  app.js  -->  
 - Past events (date before today, local timezone) show an `Ended` badge and are dimmed.
 - `Date TBD` is shown when the date is missing or malformed, and those items sort last.
 - Every card links to the official page with `View Details ↗`.
-- Empty or `TODO`-only news fields are hidden, so freshly scraped cards stay readable: only confirmed text is shown. The five CD cards keep explicit `TODO` prompts because they double as a shopping checklist.
+- Empty or `TODO`-only news fields are hidden, so freshly scraped cards stay readable: only confirmed text is shown. CD cards likewise hide an empty track list and an empty special-offer box; only the hand-written seed CDs still carry explicit `TODO` prompts.
 - All text is inserted with `textContent` / DOM APIs, never concatenated into `innerHTML`, so scraped content cannot inject markup.
 
 ### Date handling
@@ -97,12 +98,12 @@ Dates are compared as `YYYY-MM-DD` strings using the visitor's local calendar da
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `id` | string | yes | Unique. Used as the localStorage key suffix - never reuse an id for a different CD. |
-| `group` | string | yes | `μ's`, `Aqours`, `Nijigasaki`, `Liella!` or `Hasunosora`. A new value still renders, just without a themed colour. |
+| `group` | string | yes | `μ's`, `Aqours`, `Nijigasaki`, `Liella!`, `Hasunosora` or `All` (series-wide releases). A new value still renders, just without a themed colour. |
 | `artistOrUnit` | string | no | Shown as a grey tag when it differs from `group`. |
 | `albumTitle` | string | yes | Main title on the card. |
 | `releaseDate` | string | no | `YYYY-MM-DD`. Empty or invalid means "Release date TODO" and sorts last. |
-| `songs` | string[] | no | Shown as small pills. Missing list shows "Track list TODO". |
-| `specialOffer` | string | no | First-press / store bonus (特典) text. Rendered in the highlighted box. |
+| `songs` | string[] | no | Shown as small pills. An empty array hides the section (imported rows without a static track list). |
+| `specialOffer` | string | no | First-press / store bonus (特典) text. Rendered in the highlighted box; empty hides the box. |
 | `imageUrl` | string | no | Absolute `http(s)` URL or a relative `assets/...` path. Empty shows a pastel group-initial placeholder. |
 | `officialLink` | string | no | `http(s)` only. Anything else becomes "Official link TODO". |
 | `owned` | boolean | no | Initial tick state. Overridden by your localStorage choice. |
@@ -176,6 +177,37 @@ Scraped rows are deliberately incomplete: `type` starts as `Uncategorized`, `loc
 
 Markup changes: when a selector stops matching, the source logs `matched 0 elements` and is skipped without aborting the run. Inspect the page and update `scraper/config.json`.
 
+### Importing the full discography
+
+`tools/import-discography.mjs` rebuilds the `cds` array from the five official discography pages, one card per edition. It reuses the dependencies already installed in `scraper/node_modules` and is safe to re-run.
+
+```bash
+node tools/import-discography.mjs                     # dry-run report, writes nothing
+node tools/import-discography.mjs --write             # append/update cds[] in data.json
+node tools/import-discography.mjs --write --refresh   # also refill empty song arrays
+node tools/sync-fallback.mjs                          # refresh the file:// snapshot
+```
+
+| Group | Page | Rows parsed |
+| --- | --- | --- |
+| μ's | `otonokizaka/release.php` | `.titlebase` inside `.box`, details from `.text` |
+| Aqours | `uranohoshi/cd.php` | `.box` containing `.cover`, title from `.llbox`, details from `.text` |
+| Nijigasaki | `nijigasaki/cd.php` | `.box` containing `.title`, `dt`/`dd` pairs and `ul.track li` |
+| Liella! | `yuigaoka/music/` | `.jkt` anchors (`.title`, `.subtitle`, `.date`) plus one detail fetch per release |
+| Hasunosora | `hasunosora/music/` | `.list--block` (`.list--headline`, `.list--title`, `.list--desc__date`) |
+
+Rules the importer applies:
+
+- **One entry per edition.** `CD+DVD` singles stay; Blu-ray, DVD-only and live-video products are skipped, as are rows whose title is still `タイトル未定`.
+- **Dates** are normalised to `YYYY-MM-DD`. Old μ's rows that only say `4月2日発売` infer the year from the nearest dated neighbours; three ambiguous rows have explicit overrides in the script.
+- **Stable ids** are `disc-<group>-<sha1(title|date)[0:10]>`. The five original seed CDs are matched by title + release date and enriched in place, so their ids (and therefore your localStorage ticks) never change. Existing rows are never deleted.
+- **Cross-listed releases** (same title + date on several group pages) are stored once with `group: "All"`; the current run collapses 8 rows this way.
+- **Imported rows** get `owned: false`, empty `specialOffer` / `imageUrl`, and songs parsed from the page. Hasunosora track lists are rendered by JavaScript, so those cards legitimately have `songs: []` and simply hide the section.
+- **Liella!** needs one detail-page request per release (~62 today), so a full run takes about a minute.
+- **Safety:** `--write` refuses to touch `data.json` if any source fails, and repeat runs are idempotent. `--refresh` only fills song arrays that are still empty; it never overwrites your own edits.
+
+The current dataset holds **369 CDs** (μ's 76, Aqours 95, Nijigasaki 71, Liella! 57, Hasunosora 65, series-wide `All` 5), imported on 2026-11-24.
+
 ## 7. GitHub Actions
 
 The workflow lives at `.github/workflows/scrape.yml` (repository root - that path is mandatory for GitHub to discover it).
@@ -189,10 +221,11 @@ If you fork this repository, enable **Settings -> Actions -> General -> Workflow
 
 ## 8. Honesty, limits and data provenance
 
-- **Seed CDs** use real, documented release dates: μ's *Snow halation* (2010-12-22), Aqours *恋になりたいAQUARIUM* (2016-04-27), Nijigasaki *TOKIMEKI Runners* (2018-11-21), Liella! *始まりは君の空* (2021-04-07) and Hasunosora *Dream Believers* (2023-03-29). Track lists are abbreviated on purpose.
+- **Seed CDs** use real, documented release dates: μ's *Snow halation* (2010-12-22), Aqours *恋になりたいAQUARIUM* (2016-04-27), Nijigasaki *TOKIMEKI Runners* (2018-11-21), Liella! *始まりは君の空* (2021-04-07) and Hasunosora *Dream Believers* (2023-03-29). Their track lists were typed by hand and kept as-is by the importer.
+- **Discography**: the remaining 364 editions were collected from the official group discography pages on 2026-11-24. Titles, dates, artists and track lists come from those pages only; nothing was invented. Where the page lists several editions, each edition is its own card. Blu-ray / DVD-only products and `タイトル未定` placeholders are excluded. Hasunosora track lists are client-side rendered, so 64 of their 65 cards show no songs (the section is hidden rather than filled with guesses); one Aqours theme-song CD also has no published track list. `specialOffer` and `imageUrl` stay empty until you add them.
 - **News**: 23 headlines were harvested from the official group News pages on 2026-11-24 (dated 2026-11-14 to 2026-11-24), plus one historical μ's Final LoveLive entry (2016) kept as a past-event example. Harvested rows carry only a headline, date, group and link; `description`, `ticketInfo` and `specialOffer` remain empty / `TODO`. The development-only `SAMPLE ENTRY` placeholders were removed, so nothing on the board is invented.
 - **No X/Twitter scraping.** There is no free API and the anti-bot rules are strict. Check official accounts manually.
-- **No detail-page crawling**, so bonuses, ticket windows and locations are never invented by the scraper - they remain `TODO` until a human fills them in.
+- **No news detail-page crawling**, so bonuses, ticket windows and locations are never invented by the daily scraper - they remain `TODO` until a human fills them in. Only the discography importer follows Liella! detail links, and only to read track lists.
 - **No images are bundled.** Empty `imageUrl` values render a safe pastel placeholder instead of hot-linking copyrighted artwork. To use official art, host it yourself or link to it deliberately.
 - The site's markup can change at any time; the scraper is best-effort by design.
 
